@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
+import ReactDOMServer from 'react-dom/server';
 
 export default function Home() {
   const [profiles, setProfiles] = useState([]);
@@ -61,12 +62,86 @@ export default function Home() {
     scrapeProfiles();
   };
 
-  const handleCopy = async (data) => {
-    try {
-      await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
+  const handlePrint = (report) => {
+    const MarkdownContent = () => (
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw]}
+        components={{
+          h1: ({node, ...props}) => <h1 style={{fontSize: '24px', fontWeight: 'bold', margin: '16px 0'}} {...props} />,
+          h2: ({node, ...props}) => <h2 style={{fontSize: '20px', fontWeight: 'bold', margin: '14px 0'}} {...props} />,
+          h3: ({node, ...props}) => <h3 style={{fontSize: '18px', fontWeight: 'bold', margin: '12px 0'}} {...props} />,
+          p: ({node, ...props}) => <p style={{marginBottom: '16px', lineHeight: '1.6'}} {...props} />,
+          strong: ({node, ...props}) => <strong style={{fontWeight: 'bold', color: '#111'}} {...props} />,
+          ul: ({node, ...props}) => <ul style={{listStyle: 'disc', paddingLeft: '20px', marginBottom: '16px'}} {...props} />,
+          li: ({node, ...props}) => <li style={{marginBottom: '4px'}} {...props} />,
+        }}
+      >
+        {report}
+      </ReactMarkdown>
+    );
+
+    const renderedContent = ReactDOMServer.renderToString(<MarkdownContent />);
+    
+    const printWindow = window.open('', '', 'width=800,height=600');
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>LinkedIn Profile Report</title>
+          <style>
+            body {
+              font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+              line-height: 1.6;
+              padding: 40px;
+              max-width: 800px;
+              margin: 0 auto;
+              color: #222;
+              font-weight: normal;
+              text-rendering: optimizeLegibility;
+            }
+
+            strong, b {
+              font-weight: 600;
+              /* Prevent fatter rendering of specific characters */
+              font-feature-settings: normal;
+              font-variant-numeric: normal;
+            }
+
+            h1, h2, h3 {
+              font-weight: 600;
+              color: #111;
+            }
+
+            @media print {
+              body { 
+                print-color-adjust: exact;
+              }
+              @page { 
+                margin: 1.5cm;
+              }
+              /* Ensure consistent font rendering in print */
+              * {
+                font-weight: inherit;
+                text-rendering: optimizeLegibility;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${renderedContent}
+          <script>
+            document.addEventListener('DOMContentLoaded', () => {
+              setTimeout(() => {
+                window.print();
+                window.onafterprint = () => window.close();
+              }, 500);
+            });
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   return (
@@ -103,10 +178,10 @@ export default function Home() {
             <div key={index} className="bg-gray-100 p-4 rounded-md mb-8">
               <div className="relative">
                 <button
-                  onClick={() => navigator.clipboard.writeText(report)}
-                  className="absolute top-2 right-2 bg-blue-500 text-white px-3 py-1 rounded-md text-sm hover:bg-blue-600 transition-colors"
+                  onClick={() => handlePrint(report)}
+                  className="absolute top-2 right-20 bg-green-500 text-white px-3 py-1 rounded-md text-sm hover:bg-green-600 transition-colors"
                 >
-                  Copy Report
+                  Print Report
                 </button>
                 <div className="bg-white p-6 rounded-md prose prose-slate lg:prose-lg dark:prose-invert max-w-none">
                   <ReactMarkdown
