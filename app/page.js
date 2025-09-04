@@ -2,6 +2,10 @@
 import { useState } from "react";
 import { generateReport } from "@/utils/gemini";
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
 export default function Home() {
   const [profiles, setProfiles] = useState([]);
@@ -104,8 +108,41 @@ export default function Home() {
                 >
                   Copy Report
                 </button>
-                <div className="bg-white p-4 rounded-md prose prose-sm max-w-none">
-                  <ReactMarkdown>{report}</ReactMarkdown>
+                <div className="bg-white p-6 rounded-md prose prose-slate lg:prose-lg dark:prose-invert max-w-none">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeRaw]}
+                    components={{
+                      h1: ({node, ...props}) => <h1 className="text-2xl font-bold my-4" {...props} />,
+                      h2: ({node, ...props}) => <h2 className="text-xl font-bold my-3" {...props} />,
+                      h3: ({node, ...props}) => <h3 className="text-lg font-bold my-2" {...props} />,
+                      p: ({node, ...props}) => <p className="mb-4 leading-relaxed" {...props} />,
+                      strong: ({node, ...props}) => <strong className="font-bold text-gray-900" {...props} />,
+                      em: ({node, ...props}) => <em className="italic text-gray-800" {...props} />,
+                      ul: ({node, ...props}) => <ul className="list-disc list-inside mb-4 pl-4 space-y-2" {...props} />,
+                      ol: ({node, ...props}) => <ol className="list-decimal list-inside my-2" {...props} />,
+                      li: ({node, ...props}) => <li className="my-1" {...props} />,
+                      code: ({node, inline, className, children, ...props}) => {
+                        const match = /language-(\w+)/.exec(className || '');
+                        return !inline && match ? (
+                          <SyntaxHighlighter
+                            style={vscDarkPlus}
+                            language={match[1]}
+                            PreTag="div"
+                            {...props}
+                          >
+                            {String(children).replace(/\n$/, '')}
+                          </SyntaxHighlighter>
+                        ) : (
+                          <code className="bg-gray-100 rounded px-1" {...props}>
+                            {children}
+                          </code>
+                        )
+                      }
+                    }}
+                  >
+                    {report}
+                  </ReactMarkdown>
                 </div>
               </div>
             </div>
